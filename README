@@ -1,0 +1,163 @@
+This directory contains a sample matrix multiplication code in matmul.cu.
+
+Two GPU-equipped nodes have been reserved for class use. These are: 
+
+compute-45-3 and compute-45-4
+
+Each node contains 3 GPUs: one M2090 GPU (nvidia0, aka device 0), and two 
+M2070 GPUs (nvidia1 and nvidia2, aka devices 1 and 2).In addition, each 
+contains 16 cores and 128 GB of CPU memory.
+
+THE 2 GPU NODES ARE SHARED NODES (UP TO 3 JOBS AT ONCE), BUT EACH STUDENT 
+MAY ONLY HAVE 1 GPU JOB AT A TIME. 
+
+To access one of the GPU nodes, you must submit a job to the cpsc424gpu queue.
+For an interactive job, you would submit:
+
+   qsub -I -X -l procs=5,tpn=5,mem=40gb,walltime=1:00:00 -q cpsc424gpu
+
+This qsub command shows the maximum limit for walltime; feel free to use less. 
+Please DO NOT CHANGE the settings for procs, tpn, and mem. We want to ensure
+that no more than 3 jobs will be scheduled on each GPU node. As usual,
+"-X" is optional for interactive jobs. You may run a batch job by submitting
+a regular job script specifying the limits shown above.
+
+From here on in this document, you must be in a session on one of the GPU
+nodes. Most GPU-related commands will not work on nodes that have no GPUs.
+
+=============================================================================
+
+To accommodate shared access, everyone must cooperate by following some rules:
+
+1. As soon as your session starts on a GPU node, run the following: 
+
+   ~ahs3/bin/gpuget 
+
+   This command will allocate 1 GPU to your job, and it will create a file
+   owned by you in /home/fas/cpsc424/ahs3/gpus/compute-45-X, where X is either
+   3 or 4, depending on whic node you are using. (The file name will be 
+   named "nvidiaY", where Y is the GPU number allocated to your job.) 
+   
+   gpuget will also create a file in your home directory named 
+   ".cpsc424_gpu". The file contains the number of the GPU device that
+   has been assigned to you (0, 1, or 2). Note that the file is hidden 
+   since its name starts with ".". After you run gpuget, please cat the hidden
+   file and run ~ahs3/bin/gpulist as described below to make sure that a GPU 
+   has really assigned to you. If it hasn't, run gpuget again and recheck. 
+   (Each user may only assign 1 GPU at a time, and there should only be 3 
+   jobs at a time on each GPU node, so there should be enough GPUs to go
+   around.)
+
+2. At the end of your interactive job, or at the end of your job script file, 
+   please run the following:
+
+   ~ahs3/bin/gpufree
+
+   This will release the GPU assigned to you so that others can use it. Please
+   check that this worked by running ~ahs3/bin/gpulist as described in Item 3.
+   If it failed, then please run gpufree again, or manually delete any files
+   owned by you that show up in the ls command described in Item 3 below.
+
+   You may want to try inserting the following into your ~/.bash_logout file
+   to automate the gpufree process at the end of your jobs:
+
+       user=`whoami`;
+       host=`hostname -s`;
+       if [[ $host=="compute-45-3" || $host=="compute-45-4" ]] ; then
+         if [[ `~ahs3/bin/gpulist | grep $user` ]] ; then
+           gpufree >& /dev/null;
+         fi
+       fi
+
+
+3. To see what GPUs are currently allocated, run:
+
+   ~ahs3/bin/gpulist
+
+   This will list out the names of GPUscurrently in use along with the netid 
+   of the person using each one. You could also run the following ls
+   command to obtain similar information:
+
+   ls -oR /home/fas/cpsc424/ahs3/gpus
+
+4. Troubleshooting GPU Allocation:
+
+   If you get an error saying that no GPUs are available, it probably means
+   that someone has failed to run gpufree before logging out. I've set things 
+   up in a way that allows you to correct for this situation by removing
+   any of the "nvidiaY" files not owned by a user with an active job on 
+   the GPU node. To do this safely, take the following steps: 
+
+   a. Run "checknode compute-45-X", where X is replaced by either 3 or 4 
+      (whichever one matches the node you are using). You should see a list
+      of jobs at the bottom of the output. Make note of the job numbers.
+
+   b. For each job number, run "checkjob JOBNUMBER" and make note of the 
+      user name (a netid) near the top of the output. 
+
+   c. Now run "ls -oR /home/fas/cpsc424/ahs3/gpus/compute-45-X", where X is
+      again replaced by 3 or 4 depending on which node you are using. Compare
+      the list of netids in the file list with the list of netids from (b).
+      There should be at least one in the step (c) list that is not in the
+      step (b) list.
+
+   d. Run "rm -f /home/fas/cpsc424/ahs3/gpus/compute-45-X/nvidiaY", where
+      X is replaced as in (c), and where "nvidiaY" is a GPU name for which the
+      netid is not in the list from step (b). ("Y" will be 0, 1, or 2.) This
+      will delete the GPU entry from the list.
+
+   e. Now rerun ~ahs3/bin/gpuget. This should allocate a GPU for you. 
+
+   If you continue to have problems, please post on Piazza.
+
+============================================================================
+
+Once you've logged into a GPU node and allocated a GPU, you're ready to go. 
+
+Start by loading two module files:
+
+   module load Langs/Intel/15 GPU/Cuda/8.0
+
+This will set your PATH and LD_LIBRARY_PATH environment variables to find 
+Cuda tools and libraries.
+
+After loading the module files, try running "deviceQuery" to learn more about
+the GPUs installed on the node. NOTE: Neither this command, nor the Makefile 
+will work on non-GPU nodes.
+
+To build the sample matrix multiplication code, run
+
+                      make matmul
+
+This make command uses the makefile Makefile, which invokes the nvcc compiler 
+to build the code. 
+
+Once the code is built, you can execute it using:
+
+                      ./matmul <n> <B> <G> <#>
+
+where 
+
+     <n> is the number of rows and columns in the (square) matrices
+
+     <B> is the number of thread rows and columns in a thread block. 
+
+     <G> is the number of block rows and columns in the grid.
+
+     <#> is the device number to use (0, 1, or 2).
+
+So this means that  
+
+     blockDim.x = blockDim.y = <B>
+     blockDim.z = 1
+
+and
+
+     gridDim.x = gridDim.y = <G>
+     gridDim.z = 1
+
+For the sample code, you need to have at least <n> threads in the x and y 
+directions since each thread computes just one entry of the output matrix. 
+The sample code checks to make sure that it has a sufficient number of threads
+in the x and y directions to carry out the computation. You may need to modify
+that check for later parts of the assignment.
