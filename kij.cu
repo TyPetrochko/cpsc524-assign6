@@ -136,13 +136,13 @@ int main(int argc, char *argv[]) {
   for(i=0;i < n;i++)
     for(j=0;j < p;j++) {
       a[i * p + j] = (FP) rand() / (FP) RAND_MAX;
-      //      a[i * p + j] = (FP) i+j; // may be helpful for debugging
+            // a[i * p + j] = (FP) i+j; // may be helpful for debugging
     }
 
   for(i=0;i < p;i++)
     for(j=0;j < m;j++) {
       b[i * m + j] = (FP) rand() / (FP) RAND_MAX;
-      //      b[i * n + j] = (FP) i+j; // may be helpful for debugging
+            // b[i * n + j] = (FP) i+j; // may be helpful for debugging
     }
 
   // ------------- COMPUTATION DONE ON GPU ----------------------------

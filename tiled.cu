@@ -63,6 +63,7 @@ __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
   int xcoord = blockx*block_width + threadx;
   int ycoord = blocky*block_width + thready;
   
+  if(xcoord == 31 && ycoord == 253) debug = true;
 
   if(xcoord > m || ycoord > n){
     printf("We're not needed!\n"); // tbh surprised we can call printf from device
@@ -104,20 +105,20 @@ __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
     // each thread computes one matrix value
     As[block_width * thready + threadx] = a[p * a_y + a_x];
     Bs[block_width * thready + threadx] = b[m * b_y + b_x];
-    if(debug)printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
+    // if(debug)printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
 
     if(debug){
-      As[block_width * thready + threadx] = a[p * a_y + a_x];
-      Bs[block_width * thready + threadx] = b[m * b_y + b_x];
-      printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
+      // As[block_width * thready + threadx] = a[p * a_y + a_x];
+      // Bs[block_width * thready + threadx] = b[m * b_y + b_x];
+      // printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
     }
     
     // wait for all to finish computing As, Bs
     __syncthreads();
     
     if(debug){
-      printf("My ax, ay, bx, by are %d %d %d %d\n", a_x, a_y, b_x, b_y);
-      printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
+      // printf("My ax, ay, bx, by are %d %d %d %d\n", a_x, a_y, b_x, b_y);
+      // printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
       printf("As:\n");
       debugMatrix(block_width, block_width, As);
       printf("Bs:\n");
@@ -230,13 +231,13 @@ int main(int argc, char *argv[]) {
   for(i=0;i < n;i++)
     for(j=0;j < p;j++) {
       a[i * p + j] = (FP) rand() / (FP) RAND_MAX;
-      //       a[i * p + j] = (FP) i+j; // may be helpful for debugging
+             // a[i * p + j] = (FP) i+j; // may be helpful for debugging
     }
 
   for(i=0;i < p;i++)
     for(j=0;j < m;j++) {
       b[i * m + j] = (FP) rand() / (FP) RAND_MAX;
-      //      b[i * n + j] = (FP) i+j; // may be helpful for debugging
+            // b[i * n + j] = (FP) i+j; // may be helpful for debugging
     }
 
   // printf("A:\n");

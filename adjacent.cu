@@ -114,7 +114,7 @@ __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
         Bs += BLOCK_WIDTH*BLOCK_WIDTH*sizeof(FP);
     }
     
-    if(debug)printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
+    // if(debug)printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
 
     if(debug){
       // As[block_width * thready + threadx] = a[p * a_y + a_x];
@@ -125,7 +125,7 @@ __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
     if(debug){
       // printf("My ax, ay, bx, by are %d %d %d %d\n", a_x, a_y, b_x, b_y);
       // printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
-      // printf("As:\n");
+      printf("As:\n");
       debugMatrix(block_width, block_width, As);
       printf("Bs:\n");
       debugMatrix(block_width, block_width, Bs);
@@ -234,13 +234,13 @@ int main(int argc, char *argv[]) {
   for(i=0;i < n;i++)
     for(j=0;j < p;j++) {
       a[i * p + j] = (FP) rand() / (FP) RAND_MAX;
-            a[i * p + j] = (FP) i+j; // may be helpful for debugging
+            // a[i * p + j] = (FP) i+j; // may be helpful for debugging
     }
 
   for(i=0;i < p;i++)
     for(j=0;j < m;j++) {
       b[i * m + j] = (FP) rand() / (FP) RAND_MAX;
-            b[i * n + j] = (FP) i+j; // may be helpful for debugging
+            // b[i * n + j] = (FP) i+j; // may be helpful for debugging
     }
 
   // printf("A:\n");
@@ -264,8 +264,8 @@ int main(int argc, char *argv[]) {
   // cudaEventSynchronize(start); // not needed
 
   // gpu_matrixmult<<<Grid,Block>>>(dev_a,dev_b,dev_c,n,m,p);
-  gpu_matrixmult<<<Grid,Block, 2*Block_Dim*Block_Dim*sizeof(FP)>>>(dev_a,dev_b,dev_c,n,m,p);
-  printf("Allocating %d bytes total\n", 2*Block_Dim*Block_Dim*sizeof(FP));
+  gpu_matrixmult<<<Grid,Block>>>(dev_a,dev_b,dev_c,n,m,p);
+  // printf("Allocating %d bytes total\n", 2*Block_Dim*Block_Dim*sizeof(FP));
 
   cudaEventRecord(stop, 0); // instrument code to measure end time
   cudaEventSynchronize(stop);
