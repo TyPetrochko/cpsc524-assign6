@@ -24,17 +24,36 @@ __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
 }
 
 void cpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
-  int index, indexa, indexb;
-  FP cvalue;
-  for(int col=0;col < m; col++)
-    for(int row=0;row < n; row++) {
-      indexb = col;
-      index = row * m + col;
-      cvalue = 0.;
-      for (indexa = row*p; indexa < (row*p + p); indexa++, indexb+=m) 
-        cvalue += a[indexa]*b[indexb];
-      c[index] -= cvalue; //NOTE: This calculates the diff between CPU and GPU computations.
+  // Taken directly from slides
+  printf("Broken version first!\n");
+  for(int k = 0; k < p; k++){
+    for(int i = 0; i < n; i++){
+      FP r = a[(i * p) + k];
+      for(int j = 0; j < m; j++){
+        // printf("c[%d] -= a[%d]*b[%d]\n", (i*m + j), (i*p + k), (k*m + j));
+        // printf("\ta[%d] = %e\n", (i*p + k), a[i*p + k]);
+        // printf("\tb[%d] = %e\n", (k*m + j), b[k*m + j]);
+        // printf("\tc[%d] = %e\n", (i*m + j), c[i*m + j]);
+        c[(i * m)+ j] -= r * b[(k * m)+ j];
+        // printf("\tc_new[%d] = %e\n", (i*m + j), c[i*m + j]);
+      }
     }
+  }
+
+  // ORIGINAL WAY
+  // for(int i = 0; i < n; i++){
+  //   for(int j = 0; j < m; j++){
+  //     for(int k = 0; k < p; k++){
+  //       // c[i][j] -= a[i][k]*b[k][j];
+  //       printf("c[%d] -= a[%d]*b[%d]\n", (i*m + j), (i*p + k), (k*m + j));
+  //       printf("\ta[%d] = %e\n", (i*p + k), a[i*p + k]);
+  //       printf("\tb[%d] = %e\n", (k*m + j), b[k*m + j]);
+  //       printf("\tc[%d] = %e\n", (i*m + j), c[i*m + j]);
+  //       c[(i * m) + j] -= a[(i * p)+k]*b[(k *m)+j];
+  //       printf("\tc_new[%d] = %e\n", (i*m + j), c[i*m + j]);
+  //     }
+  //   }
+  // }
 }
 
 int main(int argc, char *argv[]) {
@@ -67,7 +86,7 @@ int main(int argc, char *argv[]) {
   }
 
   if ((argc<6) || (argc>7)) {
-    printf("Usage: rectangle <n> <m> <p> <block dim> <grid dim> [<dev num>]\n");
+    printf("Usage: matmul <n> <m> <p> <block dim> <grid dim> [<dev num>]\n");
     exit (-1);
   }
 
