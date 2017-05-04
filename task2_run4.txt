@@ -1,0 +1,5 @@
+Device count = 3
+Using device 1
+Matrix Dimension = 8192 8192 1024
+Block_Dim = 16, Grid_Dim = 512
+Time to calculate results on GPU: 1545.308350 ms.

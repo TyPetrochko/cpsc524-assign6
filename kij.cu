@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-// N rows (height)
-// M columns (width)
+#define DEBUG true
 
 __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
 
@@ -25,37 +24,16 @@ __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
 
 void cpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
   // Taken directly from slides
-  printf("Broken version first!\n");
   for(int k = 0; k < p; k++){
     for(int i = 0; i < n; i++){
       FP r = a[(i * p) + k];
       int cbase = i * m;
       int bbase = k * m;
       for(int j = 0; j < m; j++){
-        // printf("c[%d] -= a[%d]*b[%d]\n", (i*m + j), (i*p + k), (k*m + j));
-        // printf("\ta[%d] = %e\n", (i*p + k), a[i*p + k]);
-        // printf("\tb[%d] = %e\n", (k*m + j), b[k*m + j]);
-        // printf("\tc[%d] = %e\n", (i*m + j), c[i*m + j]);
         c[cbase + j] -= r * b[bbase + j];
-        // printf("\tc_new[%d] = %e\n", (i*m + j), c[i*m + j]);
       }
     }
   }
-
-  // ORIGINAL WAY
-  // for(int i = 0; i < n; i++){
-  //   for(int j = 0; j < m; j++){
-  //     for(int k = 0; k < p; k++){
-  //       // c[i][j] -= a[i][k]*b[k][j];
-  //       printf("c[%d] -= a[%d]*b[%d]\n", (i*m + j), (i*p + k), (k*m + j));
-  //       printf("\ta[%d] = %e\n", (i*p + k), a[i*p + k]);
-  //       printf("\tb[%d] = %e\n", (k*m + j), b[k*m + j]);
-  //       printf("\tc[%d] = %e\n", (i*m + j), c[i*m + j]);
-  //       c[(i * m) + j] -= a[(i * p)+k]*b[(k *m)+j];
-  //       printf("\tc_new[%d] = %e\n", (i*m + j), c[i*m + j]);
-  //     }
-  //   }
-  // }
 }
 
 int main(int argc, char *argv[]) {
@@ -170,6 +148,7 @@ int main(int argc, char *argv[]) {
 
   printf("Time to calculate results on GPU: %f ms.\n", elapsed_time_ms); // exec. time
 
+  if(DEBUG == false) goto cleanup;
   // ------------- COMPUTATION DONE ON HOST CPU ----------------------------
   // DEBUGGING USE ONLY (AND FOR LIMITED NUMBERS OF TIMING RUNS)
 
@@ -198,7 +177,7 @@ int main(int argc, char *argv[]) {
   printf("Total error between GPU and CPU: %e\n", error);
 
 // -------------- clean up ---------------------------------------
-
+cleanup:
   free(a);
   free(b);
   free(c);

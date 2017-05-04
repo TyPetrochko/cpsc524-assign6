@@ -22,7 +22,7 @@ GENCODE = $(GENCODE_SM20)
 
 BINARIES = matmul
 
-all: matmul rectangle kij tiled adjacent
+all: matmul kij tiled adjacent
 
 adjacent: adjacent.o
 	$(NVCC) $(GENCODE) $(LFLAGS) -o $@ $<
@@ -31,9 +31,6 @@ tiled: tiled.o
 	$(NVCC) $(GENCODE) $(LFLAGS) -o $@ $<
 
 matmul: matmul.o
-	$(NVCC) $(GENCODE) $(LFLAGS) -o $@ $<
-
-rectangle: rectangle.o
 	$(NVCC) $(GENCODE) $(LFLAGS) -o $@ $<
 
 kij: kij.o

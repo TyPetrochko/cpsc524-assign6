@@ -6,9 +6,7 @@
 #include <math.h>
 
 #define BLOCK_WIDTH 16
-
-// N rows (height)
-// M columns (width)
+#define DEBUG false
 
 void globalDebugMatrix(int m, int n, FP *matrix){
   for(int i = 0; i < n; i++){
@@ -32,24 +30,11 @@ __device__ void debugMatrix(int m, int n, FP *matrix){
 
 __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
 
-  // int col = threadIdx.x + blockDim.x * blockIdx.x;
-  // int row = threadIdx.y + blockDim.y * blockIdx.y;
-
-  // int indexb = col;
-  // int index = row * m + col;
-  // 
-  // if(col < m && row < n) {
-  //   c[index] = 0.;
-  //   for (int indexa = row*p; indexa < (row*p + p); indexa++, indexb+=m) 
-  //     c[index] += a[indexa]*b[indexb];
-  // }
-
   if(blockDim.x != blockDim.y){
     printf("Error - block is not square!\n");
     return;
   }
 
-  int debug = false;
 
   int block_width = blockDim.x;
   
@@ -57,44 +42,20 @@ __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
   int thready = threadIdx.y;
   int blockx = blockIdx.x;
   int blocky = blockIdx.y;
-
-  if(threadx == 0 && thready == 0 && blockx == 1 && blocky == 0) debug = false;
   
   int xcoord = blockx*block_width + threadx;
   int ycoord = blocky*block_width + thready;
   
-  if(xcoord == 31 && ycoord == 253) debug = true;
-
   if(xcoord > m || ycoord > n){
-    printf("We're not needed!\n"); // tbh surprised we can call printf from device
+    // printf("We're not needed!\n"); 
     return;
   }
   
-
-  // for now just do perfect matches
-  if(p % block_width > 0.0)
-    printf("WARNING: matrix p dimension is not a perfect multiple of block width!\n");
-  if(m % block_width > 0.0)
-    printf("WARNING: matrix m dimension is not a perfect multiple of block width!\n");
-  if(n % block_width > 0.0)
-    printf("WARNING: matrix n dimension is not a perfect multiple of block width!\n");
-    
-  // extern __shared__ FP As[];
-  // FP *Bs = As + (block_width * block_width * sizeof(FP));
-
   __shared__ FP As[BLOCK_WIDTH * BLOCK_WIDTH * sizeof(FP)];
   __shared__ FP Bs[BLOCK_WIDTH * BLOCK_WIDTH * sizeof(FP)];
 
   FP c_value = 0.;
   for(int i = 0; i < (p / block_width); i++){
-
-    if(debug){
-      printf("On iteration %d\n", i);
-    }
-    
-
-    // __shared__ FP *As = cudaMalloc(sizeof(FP) * block_width * block_width);
-    // __shared__ FP *Bs = cudaMalloc(sizeof(FP) * block_width * block_width);
 
     int a_y = blocky*block_width + thready;
     int a_x = i*block_width + threadx;
@@ -105,26 +66,9 @@ __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
     // each thread computes one matrix value
     As[block_width * thready + threadx] = a[p * a_y + a_x];
     Bs[block_width * thready + threadx] = b[m * b_y + b_x];
-    // if(debug)printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
 
-    if(debug){
-      // As[block_width * thready + threadx] = a[p * a_y + a_x];
-      // Bs[block_width * thready + threadx] = b[m * b_y + b_x];
-      // printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
-    }
-    
     // wait for all to finish computing As, Bs
     __syncthreads();
-    
-    if(debug){
-      // printf("My ax, ay, bx, by are %d %d %d %d\n", a_x, a_y, b_x, b_y);
-      // printf("My copied vals in a and b are %e %e\n", As[block_width * thready + threadx], Bs[block_width * thready + threadx]);
-      printf("As:\n");
-      debugMatrix(block_width, block_width, As);
-      printf("Bs:\n");
-      debugMatrix(block_width, block_width, Bs);
-      printf("\n\n");
-    }
 
 
     for(int e = 0; e < block_width; e++){
@@ -140,7 +84,6 @@ __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
 
 void cpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
   // Taken directly from slides
-  printf("Broken version first!\n");
   for(int k = 0; k < p; k++){
     for(int i = 0; i < n; i++){
       FP r = a[(i * p) + k];
@@ -240,11 +183,6 @@ int main(int argc, char *argv[]) {
             // b[i * n + j] = (FP) i+j; // may be helpful for debugging
     }
 
-  // printf("A:\n");
-  // globalDebugMatrix(p, n, a);
-
-  // printf("B:\n");
-  // globalDebugMatrix(m, p, b);
   // ------------- COMPUTATION DONE ON GPU ----------------------------
 
   cudaMalloc((void**)&dev_a, size_a); // allocate memory on device
@@ -260,9 +198,7 @@ int main(int argc, char *argv[]) {
   cudaEventRecord(start, 0);
   // cudaEventSynchronize(start); // not needed
 
-  // gpu_matrixmult<<<Grid,Block>>>(dev_a,dev_b,dev_c,n,m,p);
-  gpu_matrixmult<<<Grid,Block, 2*Block_Dim*Block_Dim*sizeof(FP)>>>(dev_a,dev_b,dev_c,n,m,p);
-  printf("Allocating %d bytes total\n", 2*Block_Dim*Block_Dim*sizeof(FP));
+  gpu_matrixmult<<<Grid,Block>>>(dev_a,dev_b,dev_c,n,m,p);
 
   cudaEventRecord(stop, 0); // instrument code to measure end time
   cudaEventSynchronize(stop);
@@ -271,7 +207,7 @@ int main(int argc, char *argv[]) {
   cudaMemcpy(c,dev_c, size_c,cudaMemcpyDeviceToHost);
 
   printf("Time to calculate results on GPU: %f ms.\n", elapsed_time_ms); // exec. time
-
+  if(DEBUG == false) goto cleanup;
   // ------------- COMPUTATION DONE ON HOST CPU ----------------------------
   // DEBUGGING USE ONLY (AND FOR LIMITED NUMBERS OF TIMING RUNS)
 
@@ -300,7 +236,7 @@ int main(int argc, char *argv[]) {
   printf("Total error between GPU and CPU: %e\n", error);
 
 // -------------- clean up ---------------------------------------
-
+cleanup:
   free(a);
   free(b);
   free(c);

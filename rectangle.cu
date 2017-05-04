@@ -5,9 +5,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-// N rows (height)
-// M columns (width)
-
 __global__ void gpu_matrixmult(FP *a,FP *b, FP *c, int n, int m, int p) {
 
   int col = threadIdx.x + blockDim.x * blockIdx.x;
